@@ -15,7 +15,10 @@
 #import "CPTUtilities.h"
 #import "CPTXYPlotSpace.h"
 #import "NSCoderExtensions.h"
+#import "CatmullRom.h"
 #import <tgmath.h>
+
+
 
 /** @defgroup plotAnimationScatterPlot Scatter Plot
  *  @brief Scatter plot properties that can be animated using Core Animation.
@@ -176,6 +179,7 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
 @dynamic areaFillBands;
 
 @synthesize mutableAreaFillBands;
+
 
 #pragma mark -
 #pragma mark Init/Dealloc
@@ -432,7 +436,8 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
 
     CPTLineStyle *lineStyle = self.dataLineStyle;
 
-    if ( self.areaFill || self.areaFill2 || lineStyle.dashPattern || lineStyle.lineFill || (self.interpolation == CPTScatterPlotInterpolationCurved) ) {
+    if ( self.areaFill || self.areaFill2 || lineStyle.dashPattern || lineStyle.lineFill || (self.interpolation == CPTScatterPlotInterpolationCurved)
+            || self.interpolation == CPTScatterPlotInterpolationCatmullRom) {
         // show all points to preserve the line dash and area fills
         for ( NSUInteger i = 0; i < dataCount; i++ ) {
             pointDrawFlags[i] = YES;
@@ -510,6 +515,7 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
         else {
             switch ( theInterpolation ) {
                 case CPTScatterPlotInterpolationCurved:
+                case CPTScatterPlotInterpolationCatmullRom:
                     // Keep 2 points outside of the visible area on each side to maintain the correct curvature of the line
                     if ( dataCount > 1 ) {
                         if ( !nanFlags[0] && !nanFlags[1] && ( (xRangeFlags[0] != xRangeFlags[1]) || (yRangeFlags[0] != yRangeFlags[1]) ) ) {
@@ -924,6 +930,8 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
 
     if ( theInterpolation == CPTScatterPlotInterpolationCurved ) {
         return [self newCurvedDataLinePathForViewPoints:viewPoints indexRange:indexRange baselineYValue:baselineYValue];
+    } else if (theInterpolation == CPTScatterPlotInterpolationCatmullRom){
+        return [self newCatmullRomDataLinePathForViewPoints:viewPoints indexRange:indexRange baselineYValue:baselineYValue];
     }
 
     CGMutablePathRef dataLinePath  = CGPathCreateMutable();
@@ -980,6 +988,7 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
                     break;
 
                     case CPTScatterPlotInterpolationCurved:
+                    case CPTScatterPlotInterpolationCatmullRom:
                         // Curved plot lines handled separately
                         break;
                 }
@@ -995,6 +1004,35 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
     }
 
     return dataLinePath;
+}
+
+
+-(CGPathRef)newCatmullRomDataLinePathForViewPoints:(CGPoint *)viewPoints indexRange:(NSRange)indexRange baselineYValue:(CGFloat)baselineYValue
+{
+
+    NSUInteger nInputPoints = indexRange.length;
+    NSMutableArray * inputPoints = [NSMutableArray array];
+    for(int i=indexRange.location; i<indexRange.location + nInputPoints; i++){
+        // TODO - use baselineYValue? 
+        CGPoint p = viewPoints[i];
+        CGPoint q = CGPointMake(p.x, p.y);//- isnan(baselineYValue)?0:baselineYValue);
+        [inputPoints addObject:[NSValue valueWithCGPoint:q]];
+    }
+
+    int segments = 40;
+
+    NSArray *outputPoints = [CatmullRom interpolate:inputPoints withPointsPerSegment:segments andType:CatmullRomTypeCentripetal];
+    int numSegments = outputPoints.count;
+
+
+    CGMutablePathRef path = CGPathCreateMutable();
+    CGPoint p = [outputPoints[0] CGPointValue];
+    CGPathMoveToPoint(path, nil, p.x, p.y);
+    for (int i = 1; i < numSegments; i++) {
+        p = [outputPoints[i] CGPointValue];
+        CGPathAddLineToPoint(path, nil, p.x, p.y);
+    }
+    return path;
 }
 
 -(CGPathRef)newCurvedDataLinePathForViewPoints:(CGPoint *)viewPoints indexRange:(NSRange)indexRange baselineYValue:(CGFloat)baselineYValue
