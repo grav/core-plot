@@ -1019,9 +1019,18 @@ NSString *const CPTScatterPlotBindingPlotSymbols = @"plotSymbols"; ///< Plot sym
         [inputPoints addObject:[NSValue valueWithCGPoint:q]];
     }
 
+    // TODO - extract parameter
     int segments = 40;
+    CatmullRomType type = CatmullRomTypeCentripetal;
 
-    NSArray *outputPoints = [CatmullRom interpolate:inputPoints withPointsPerSegment:segments andType:CatmullRomTypeCentripetal];
+    NSMutableArray *outputPoints = [CatmullRom interpolate:inputPoints withPointsPerSegment:segments andType:type];
+    CGPoint firstDataPoint = [[outputPoints firstObject] CGPointValue];
+    CGPoint firstPoint = CGPointMake(firstDataPoint.x, 0);
+    [outputPoints insertObject:[NSValue valueWithCGPoint:firstPoint] atIndex:0];
+
+    CGPoint lastDataPoint = [[outputPoints lastObject] CGPointValue];
+    CGPoint lastPoint = CGPointMake(lastDataPoint.x, 0);
+    [outputPoints addObject:[NSValue valueWithCGPoint:lastPoint]];
     int numSegments = outputPoints.count;
 
 
