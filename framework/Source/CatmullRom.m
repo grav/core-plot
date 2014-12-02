@@ -14,7 +14,7 @@
 
 +(NSMutableArray *)interpolate:(NSArray *)coordinates withPointsPerSegment:(NSInteger)pointsPerSegment andType:(CatmullRomType)curveType {
 
-    NSMutableArray *vertices = [[[NSMutableArray alloc] initWithArray:coordinates copyItems:YES] autorelease];
+    NSMutableArray *vertices = [[NSMutableArray alloc] initWithArray:coordinates copyItems:YES];
 
     if (pointsPerSegment < 3)
         return vertices;
@@ -46,7 +46,7 @@
     [vertices insertObject:[NSValue valueWithCGPoint:start] atIndex:0];
     [vertices addObject:[NSValue valueWithCGPoint:end]];
 
-    NSMutableArray *result = [[[NSMutableArray alloc] init] autorelease];
+    NSMutableArray *result = [NSMutableArray array];
 
     for (int i = 0; i < vertices.count - 3; i++) {
         NSMutableArray *points = [self interpolate:vertices forIndex:i withPointsPerSegment:pointsPerSegment andType:curveType];
@@ -71,7 +71,7 @@
 }
 
 +(NSMutableArray*)interpolate:(NSArray *)points forIndex:(NSInteger)index withPointsPerSegment:(NSInteger)pointsPerSegment andType:(CatmullRomType)curveType {
-    NSMutableArray *result = [[[NSMutableArray alloc] init] autorelease];
+    NSMutableArray *result = [NSMutableArray array];
 
     double x[4];
     double y[4];
